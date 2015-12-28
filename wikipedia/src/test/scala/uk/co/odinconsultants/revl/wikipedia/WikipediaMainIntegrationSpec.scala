@@ -12,7 +12,8 @@ import scala.util.Random
 class WikipediaMainIntegrationSpec extends WordSpec with Matchers with BeforeAndAfterAll {
 
   val sc              = Spark.sparkContext()
-  val config          = WikipediaConfig() // (k = 10)
+  val dir             = (this.getClass.getResource("/") + "../../src/test/resources/").replaceFirst("^file:", "file://")
+  val config          = WikipediaConfig(k = 100, saveDirectory = dir)
   val originalRows    = config.k * 3
   val originalColumns = config.k * 2
 
@@ -25,18 +26,30 @@ class WikipediaMainIntegrationSpec extends WordSpec with Matchers with BeforeAnd
       svd.V.numRows shouldEqual originalColumns
 
       val q = createQuery
-      val newQ = q_x_U(q, svd.U, sc)
-      newQ.validate()
+      val u = svd.U
+      multiply(q, u)
 
-      newQ.numRows() shouldEqual 1
-      newQ.numCols() shouldEqual config.k
+      WikipediaMain.save(config, sc, svd)
+
+      val uFromFileRDD = sc.textFile(config.leftSingularFilename).map { line =>
+        val elements = line.split(delimiter)
+        IndexedRow(elements(0).toInt, Vectors.dense(elements.drop(1).map(_.toDouble)))
+      }
+      multiply(q, new IndexedRowMatrix(uFromFileRDD))
     }
+  }
+
+  def multiply(q: SparseMatrix, u: IndexedRowMatrix): Unit = {
+    val newQ = q_x_U(q, u, sc)
+    newQ.validate()
+    newQ.numRows() shouldEqual 1
+    newQ.numCols() shouldEqual config.k
   }
 
   def createQuery: SparseMatrix = {
     val indices = Array(0, originalRows - 1)
     val values = Array(1d, 10d)
-    new SparseMatrix(1, originalRows, Array(0, indices.size), indices, values)
+    new SparseMatrix(1, originalRows, Array(0, indices.length), indices, values)
   }
 
   def generateMatrix(rows: Int, config: WikipediaConfig): IndexedRowMatrix = {

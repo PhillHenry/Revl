@@ -10,7 +10,7 @@ import scala.collection.{Map, mutable}
 class AdvancedAnalyticsWithSparkCh6(config: WikipediaConfig, sc: SparkContext) {
 
   def preprocessing(sampleSize: Double, numTerms: Int): (RDD[Vector], Map[Int, String], Map[Long, String], Map[String, Double]) = {
-    val pages       = ParseWikipedia.readFile(config.directory, sc).sample(false, sampleSize, 11L)
+    val pages       = ParseWikipedia.readFile(config.directory, sc).sample(withReplacement = false, sampleSize, 11L)
     val plainText   = pages.filter(_ != null).flatMap(ParseWikipedia.wikiXmlToPlainText(_))
     val stopWords   = sc.broadcast(ParseWikipedia.loadStopWords(config.stopwordsFile)).value
 
@@ -34,7 +34,7 @@ class AdvancedAnalyticsWithSparkCh6(config: WikipediaConfig, sc: SparkContext) {
     val docTermFreqs = docToTermFreq(docs)
     val docIds       = idsToDocs(docTermFreqs)
     val docFreqs     = ParseWikipedia.documentFrequenciesDistributed(docTermFreqs.map(_._2), numTerms)
-    println("Number of terms: " + docFreqs.size)
+    println("Number of terms: " + docFreqs.length)
     ParseWikipedia.saveDocFreqs("docfreqs.tsv", docFreqs)
 
     val numDocs     = docIds.size

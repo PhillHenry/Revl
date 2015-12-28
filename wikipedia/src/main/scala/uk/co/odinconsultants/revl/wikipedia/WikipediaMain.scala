@@ -20,27 +20,32 @@ object WikipediaMain {
   def run(config: WikipediaConfig): Unit = {
     val sc            = getSparkContext(config)
     val analytics     = new AdvancedAnalyticsWithSparkCh6(config, sc)
-    val (termDocRDD, termIds, docIds, idfs) = analytics.preprocessing(sampleSize = 0.1, numTerms = 50000)
+    val (termDocRDD, termIds, docIds, idfs)
+                      = analytics.preprocessing(sampleSize = 0.1, numTerms = 50000)
     val termDocMatrix = new IndexedRowMatrix(termDocRDD.zipWithUniqueId().map(x => IndexedRow(x._2, x._1)))
     val svd           = computeSVD(config, termDocMatrix)
 
-    // http://www1.se.cuhk.edu.hk/~seem5680/lecture/LSI-Eg.pdf
-    save(svd.U.rows, s"${config.saveDirectory}/left_singular_vectors.rdd")
-    val V = svd.V.toArray.grouped(svd.V.numRows).toList.transpose
-    sc.makeRDD(V, 1).zipWithIndex()
-      .map(line => line._2 + "\t" + line._1.mkString("\t")) // make tsv line starting with column index
-      .saveAsTextFile(s"${config.saveDirectory}/right_singular_vectors.rdd")
-    sc.makeRDD(svd.s.toArray, 1).saveAsTextFile(s"${config.saveDirectory}/singular_values.rdd")
+    save(config, sc, svd)
   }
 
-  def UxSinv(svd: SingularValueDecomposition[IndexedRowMatrix, Matrix]) = {
-    val u = svd.U
-    val s = svd.s
-    ???
+  val delimiter = "\t"
+
+  /**
+    * @see see https://gist.github.com/vrilleup/9e0613175fab101ac7cd
+    */
+  def save(config: WikipediaConfig, sc: SparkContext, svd: SingularValueDecomposition[IndexedRowMatrix, Matrix]): Unit = {
+    save(svd.U.rows, config.leftSingularFilename)
+    val V = svd.V.toArray.grouped(svd.V.numRows).toList.transpose
+    sc.makeRDD(V, 1).zipWithIndex()
+      .map(line => line._2 + delimiter + line._1.mkString(delimiter)) // make tsv line starting with column index
+      .saveAsTextFile(config.rightSingularFilename)
+    sc.makeRDD(svd.s.toArray, 1).saveAsTextFile(config.singularValuesFilename)
   }
 
   /**
     * q U = ( ( q U )T )T = ( UT qT)T
+    *
+    * @see http://www1.se.cuhk.edu.hk/~seem5680/lecture/LSI-Eg.pdf
     */
   def q_x_U(q: SparseMatrix, u: IndexedRowMatrix, sc: SparkContext): BlockMatrix = {
     val qIndexedRows  = toSeq(q)
@@ -64,7 +69,7 @@ object WikipediaMain {
   }
 
   def save(rdd: RDD[IndexedRow], filename: String): Unit = {
-    rdd.map(row => (row.index, row.vector.toArray)).map(line => line._1 + "\t" + line._2.mkString("\t")).saveAsTextFile(filename)
+    rdd.map(row => (row.index, row.vector.toArray)).map(line => line._1 + delimiter + line._2.mkString(delimiter)).saveAsTextFile(filename)
   }
 
 

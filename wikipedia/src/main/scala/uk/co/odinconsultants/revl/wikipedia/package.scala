@@ -11,7 +11,11 @@ package object wikipedia {
                              k: Int                = 100,
                              jars: Seq[String]     = List[String](),
                              stopwordsFile: String = "/home/henryp/Code/Scala/Spark/AdvancedAnalyticsWithSpark/./aas/ch06-lsa/src/main/resources/stopwords.txt",
-                             numPartitions: Int    = 2)
+                             numPartitions: Int    = 2) {
+    val rightSingularFilename   = s"$saveDirectory/right_singular_vectors.rdd"
+    val leftSingularFilename    = s"$saveDirectory/left_singular_vectors.rdd"
+    val singularValuesFilename  = s"$saveDirectory/singular_values.rdd"
+  }
 
   def parseArgs(args: Array[String]): Option[WikipediaConfig] = {
     val parser = new scopt.OptionParser[WikipediaConfig]("StockCorrelation") {
