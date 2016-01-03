@@ -5,7 +5,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 
 package object wikipedia {
-  case class WikipediaConfig(directory: String     = "/home/henryp/CorsairData",
+  case class WikipediaConfig(directory: String     = "/home/henryp/Mounts/CorsairData",
                              saveDirectory: String = "hdfs://192.168.1.15:8020/Wikipedia/",
                              sparkUrl: String      = Spark.localMaster,
                              k: Int                = 100,
@@ -18,11 +18,11 @@ package object wikipedia {
   }
 
   def parseArgs(args: Array[String]): Option[WikipediaConfig] = {
-    val parser = new scopt.OptionParser[WikipediaConfig]("StockCorrelation") {
+    val parser = new scopt.OptionParser[WikipediaConfig]("Wikipedia") {
       opt[String]('d', "directory") action { case(value, config) => config.copy(directory = value) } text "data directory"
       opt[String]('s', "spark") action { case(value, config) => config.copy(sparkUrl = value) } text "spark URL"
       opt[String]('w', "stopwordsFile") action { case(value, config) => config.copy(stopwordsFile = value) } text "file containing stopwords"
-      opt[String]('o', "output") action { case(value, config) => config.copy(stopwordsFile = value) } text "output directory"
+      opt[String]('o', "output") action { case(value, config) => config.copy(saveDirectory = value) } text "output directory"
       opt[Seq[String]]('j', "jars") valueName "<jar1>,<jar2>..."  action { (value, config) =>
         config.copy(jars = value)
       } text "jars"
