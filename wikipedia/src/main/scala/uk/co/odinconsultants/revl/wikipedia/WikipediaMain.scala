@@ -36,8 +36,8 @@ object WikipediaMain {
   def save(config: WikipediaConfig, sc: SparkContext, svd: SingularValueDecomposition[IndexedRowMatrix, Matrix]): Unit = {
     save(svd.U.rows, config.leftSingularFilename)
     val V = svd.V.toArray.grouped(svd.V.numRows).toList.transpose
-    sc.makeRDD(V, 1).zipWithIndex()
-      .map(line => line._2 + delimiter + line._1.mkString(delimiter)) // make tsv line starting with column index
+    sc.makeRDD(V, 1).zipWithIndex().map(_.swap)
+      .map(toTSV) // make tsv line starting with column index
       .saveAsTextFile(config.rightSingularFilename)
     sc.makeRDD(svd.s.toArray, 1).saveAsTextFile(config.singularValuesFilename)
   }
@@ -47,8 +47,10 @@ object WikipediaMain {
   }
 
   def save(rdd: RDD[IndexedRow], filename: String): Unit = {
-    rdd.map(row => (row.index, row.vector.toArray)).map(line => line._1 + delimiter + line._2.mkString(delimiter)).saveAsTextFile(filename)
+    rdd.map(row => (row.index, row.vector.toArray.toList)).map(toTSV).saveAsTextFile(filename)
   }
 
-
+  def toTSV: ((Long, TraversableOnce[Double])) => String = {
+    line => line._1 + delimiter + line._2.mkString(delimiter)
+  }
 }
