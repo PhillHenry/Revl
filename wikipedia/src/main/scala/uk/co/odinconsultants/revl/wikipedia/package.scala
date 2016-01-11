@@ -1,7 +1,7 @@
 package uk.co.odinconsultants.revl
 
 import com.henryp.sparkfinance.config.Spark
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 
 package object wikipedia {
@@ -33,7 +33,11 @@ package object wikipedia {
   }
 
   def getSparkContext(config: WikipediaConfig): SparkContext = {
-    val context = Spark.sparkContext(config.sparkUrl)
+    val conf = new SparkConf()
+    conf.setMaster(config.sparkUrl)
+    conf.setAppName("Wikipedia")
+    conf.set("spark.eventLog.enabled", "true")
+    val context = SparkContext.getOrCreate(conf)
     config.jars.foreach { jar =>
       println(s"Adding JAR $jar")
       context.addJar(jar)

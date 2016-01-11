@@ -44,6 +44,9 @@ class AdvancedAnalyticsWithSparkCh6(config: WikipediaConfig, sc: SparkContext) {
     val termIds     = idTerms.map(_.swap)
 
     val vecs        = scores(docTermFreqs, idfs, idTerms)
+
+    ParseWikipedia.saveDocFreqs("idTerms.tsv", idTerms.toArray)
+
     (vecs, termIds, docIds, idfs)
   }
 

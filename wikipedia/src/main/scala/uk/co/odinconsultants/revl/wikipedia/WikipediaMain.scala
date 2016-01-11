@@ -1,14 +1,25 @@
 package uk.co.odinconsultants.revl.wikipedia
 
+import java.util.Date
+
+import com.henryp.sparkfinance.logging.Logging
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.distributed.{IndexedRow, IndexedRowMatrix}
 import org.apache.spark.mllib.linalg.{Matrix, SingularValueDecomposition}
 import org.apache.spark.rdd.RDD
 
+import scala.util.{Failure, Success, Try}
+
 /**
   * Taken from chapter 6 of Advanced Analytics With Spark
+  *
+  * Run with app arguments something like:
+  *
+-s spark://192.168.1.9:7077 -o hdfs://192.168.1.15:8020/Wikipedia/3Jan16 -p 20 -j /home/henryp/Code/Scala/Revl/wikipedia/target/wikipedia-1.0-SNAPSHOT.jar
+  *
+  *
   */
-object WikipediaMain {
+object WikipediaMain extends Logging {
 
   val delimiter = "\t"
 
@@ -22,12 +33,22 @@ object WikipediaMain {
   def run(config: WikipediaConfig): Unit = {
     val sc            = getSparkContext(config)
     val analytics     = new AdvancedAnalyticsWithSparkCh6(config, sc)
-    val (termDocRDD, termIds, docIds, idfs)
-                      = analytics.preprocessing(sampleSize = 0.1, numTerms = 50000)
-    val termDocMatrix = new IndexedRowMatrix(termDocRDD.zipWithUniqueId().map(x => IndexedRow(x._2, x._1)))
-    val svd           = computeSVD(config, termDocMatrix)
+    val tryProcess    = Try {
+      val (termDocRDD, termIds, docIds, idfs)
+                        = analytics.preprocessing(sampleSize = 0.2, numTerms = 50000)
+      val termDocMatrix = new IndexedRowMatrix(termDocRDD.zipWithUniqueId().map(x => IndexedRow(x._2, x._1)))
+      val svd           = computeSVD(config, termDocMatrix)
 
-    save(config, sc, svd)
+      save(config, sc, svd)
+    }
+
+    tryProcess match {
+      case Success(_) => println("done")
+      case Failure(x) => x.printStackTrace()
+    }
+
+    info("Press any key. (" + new Date() + ")")
+    Console.in.readLine()
   }
 
   /**

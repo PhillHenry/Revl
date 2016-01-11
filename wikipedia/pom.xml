@@ -17,6 +17,11 @@
     <dependencies>
         <dependency>
             <groupId>org.apache.spark</groupId>
+            <artifactId>spark-core_2.11</artifactId>
+            <version>${spark.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.spark</groupId>
             <artifactId>spark-mllib_2.11</artifactId>
             <version>${spark.version}</version>
         </dependency>
@@ -58,19 +63,31 @@
             <version>1.0.2</version>
         </dependency>
         <dependency>
+            <groupId>com.cloudera.datascience</groupId>
+            <artifactId>ch06-lsa</artifactId>
+            <version>1.0.2</version>
+        </dependency>
+        <dependency>
             <groupId>uk.co.odinconsultants.sparkfinance</groupId>
             <artifactId>logging</artifactId>
             <version>1.0-SNAPSHOT</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.github.scopt</groupId>
+                    <artifactId>scopt_2.11</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>uk.co.odinconsultants.sparkfinance</groupId>
             <artifactId>config</artifactId>
             <version>1.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>com.cloudera.datascience</groupId>
-            <artifactId>ch06-lsa</artifactId>
-            <version>1.0.2</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.github.scopt</groupId>
+                    <artifactId>scopt_2.11</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 
@@ -80,7 +97,69 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.4.2</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <!--<includes>-->
+                                        <!--<include>uk/co/odinconsultants/**/*</include>-->
+                                    <!--</includes>-->
+                                    <excludes>
+                                        <!-- http://stackoverflow.com/questions/999489/invalid-signature-file-when-attempting-to-run-a-jar -->
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>javax/**/*</exclude>
+                                        <exclude>java/**/*</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.2.1</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <mainClass>uk.co.odinconsultants.revl.wikipedia.WikipediaMain</mainClass>
+                    <environmentVariables>
+                        <SPARK_LOCAL_IP>192.168.1.15</SPARK_LOCAL_IP>
+                    </environmentVariables>
+                    <arguments>
+                        <!-- See http://stackoverflow.com/questions/5396749/pass-command-line-params-in-mvn-execexec -->
+                        <!--<argument>-Xmx6G</argument>-->
+                        <argument>-s</argument>
+                        <argument>spark://192.168.1.9:7077</argument>
+                        <argument>-o</argument>
+                        <argument>hdfs://192.168.1.15:8020/Wikipedia/3Jan16</argument>
+                        <argument>-p</argument>
+                        <argument>20</argument>
+                        <argument>-j</argument>
+                        <argument>${project.build.directory}/wikipedia-1.0-SNAPSHOT.jar</argument>
+                    </arguments>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
+
 
 </project>
